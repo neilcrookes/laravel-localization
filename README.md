@@ -26,9 +26,11 @@ Easy i18n localization for Laravel 4, an useful tool to combine with Laravel loc
 
 Add Laravel Localization to your `composer.json` file.
 
-    "mcamara/laravel-localization": "0.13.*"
+    "mcamara/laravel-localization": "0.14.*"
 
 Run `composer install` to get the latest version of the package.
+
+If you are using a laravel version lower than 4.2, you should use 0.13.* version.
 
 ### Manually
 
@@ -197,15 +199,15 @@ It returns a URL localized to the desired locale.
      * Returns an URL adapted to the route name and the locale given
      *
      * @param  string $locale 		    Locale to adapt
-     * @param  string $transKeyName  	Translation key name of the url to adapt
+     * @param  array $transKeyNames  	Array containing the Translation key name of the url to adapt
      * @param  array $attributes  		Attributes for the route (only needed if transKeyName needs them)
      *
      * @return string|boolean  	        URL translated
      */
-    public function getURLFromRouteNameTranslated($locale, $transKeyName = null, $attributes = array())
+    public function getURLFromRouteNameTranslated($locale, $transKeyNames = array(), $attributes = array())
 
 	//Should be called in a view like this:
-	{{ LaravelLocalization::getURLFromRouteNameTranslated(string $locale, optional string $transKeyName, optional array $attributes) }}
+	{{ LaravelLocalization::getURLFromRouteNameTranslated(string $locale, optional array $transKeyNames, optional array $attributes) }}
 ```
 
 It returns a route, localized to the desired locale using the locale passed. If the translation key does not exist in the locale given, this function will return false.
@@ -317,7 +319,6 @@ If you're supporting multiple locales in your project your going to want to prov
 
 
 ## Translated Routes
-_**New in version 0.5**_
 
 You can adapt your URLs depending on the language you want to show them. For example, http://url/en/about and http://url/es/acerca (acerca is about in spanish) or http://url/en/view/5 and http://url/es/ver/5 (view == ver in spanish) would be redirected to the same controller using the proper filter and setting up the translation files as follows:
 ```php
@@ -370,6 +371,21 @@ Then you have to create the translation files and add there every key you want t
 ```
 
 Once files are saved, you can access to http://url/en/about , http://url/es/acerca , http://url/en/view/5 and http://url/es/ver/5 without any problem. The getLanguageBar function would work as desired and it will translate the routes to all translated languages (don't forget to add any new route to the translation file).
+
+## Events
+
+You can capture the URL parameters during translation if you wish to translate them too. To do so, just create an event listener for the `routes.translation` event like so :
+
+````
+Event::listen('routes.translation', function($locale, $attributes)
+{
+	// Do your magic
+
+    return $attributes;
+});
+````
+
+Be sure to pass the locale and the attributes as parameters for your closure. You can also use Event Subscribers, see : [http://laravel.com/docs/events#event-subscribers](http://laravel.com/docs/events#event-subscribers)
 
 ## Config
 

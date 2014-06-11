@@ -1,7 +1,7 @@
 <?php namespace Mcamara\LaravelLocalization;
 
 use Illuminate\Config\Repository;
-use Illuminate\View\Environment;
+use Illuminate\View\Factory;
 use Illuminate\Translation\Translator;
 use Exception;
 use Request;
@@ -23,9 +23,9 @@ class LaravelLocalization
 	protected $configRepository;
 
 	/**
-	 * Illuminate view environment.
+	 * Illuminate view Factory.
 	 *
-	 * @var \Illuminate\View\Environment
+	 * @var \Illuminate\View\Factory
 	 */
 	protected $view;
 
@@ -77,10 +77,10 @@ class LaravelLocalization
      * @throws UnsupportedLocaleException
 	 *
 	 * @param \Illuminate\Config\Repository $configRepository
-	 * @param \Illuminate\View\Environment $view
+	 * @param \Illuminate\View\Factory $view
 	 * @param \Illuminate\Translation\Translator $translator
 	 */
-	public function __construct(Repository $configRepository, Environment $view, Translator $translator)
+	public function __construct(Repository $configRepository, Factory $view, Translator $translator)
 	{
 		$this->configRepository = $configRepository;
 		$this->view = $view;
@@ -398,23 +398,17 @@ class LaravelLocalization
 				// the system will take the same
 				global $app;
 				$router = $app['router'];
-				if (App::make('laravel-localization.4.1'))
-				{
-					// Laravel 4.1
-					$attributes = $router->current()->parameters();
-				}
-				else
-				{
-					// Laravel 4.0
-					$attributes = $router->getCurrentRoute()->getParameters();
-				}
+				$attributes = $router->current()->parameters();
+                $response = \Event::fire('routes.translation', array('locale' => $locale, 'attributes' => $attributes));
+                if(!empty($response)) $response = array_shift($response);
+                if(is_array($response)) $attributes = array_merge($attributes, $response);
 			}
 		}
 
 		$route = "";
 		if (!($locale === $this->defaultLocale && $this->hideDefaultLocaleInURL()))
 		{
-			$route = $locale;
+			$route = '/'.$locale;
 		}
 		
 		foreach ($transKeysNames as $transKeyName)
@@ -795,19 +789,16 @@ class LaravelLocalization
 		}
 		$path = str_replace('/' . $this->currentLocale . '/', '', $path);
 		$path = trim($path,"/");
-		$path = explode("/",$path);
 		$routesNames = array();
 
-		foreach ($path as $path_route)
-		{
-			foreach ($this->translatedRoutes as $route)
-			{
-				if ($this->translator->trans($route) == $path_route)
-				{
-					$routesNames[] = $route;
-				}
-			}
-		}
+
+        foreach ($this->translatedRoutes as $route)
+        {
+            if ($this->translator->trans($route) == $path)
+            {
+                $routesNames[] = $route;
+            }
+        }
 
 		return $routesNames;
 	}
@@ -1025,16 +1016,7 @@ Route::filter('LaravelLocalizationRoutes', function()
 {
 	global $app;
 	$router = $app['router'];
-	if (App::make('laravel-localization.4.1'))
-	{
-		// Laravel 4.1
-		$routeName = $app['laravellocalization']->getRouteNameFromAPath($router->current()->uri());
-	}
-	else
-	{
-		// Laravel 4.0
-		$routeName = $app['laravellocalization']->getRouteNameFromAPath($router->getCurrentRoute()->getPath());
-	}
+	$routeName = $app['laravellocalization']->getRouteNameFromAPath($router->current()->uri());
 
 	$app['laravellocalization']->setRouteName($routeName);
 	return;
